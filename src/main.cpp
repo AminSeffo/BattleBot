@@ -1,182 +1,120 @@
-/*
-  Arduino FS-I6X Demo
-  fsi6x-arduino-uno.ino
-  Read output ports from FS-IA6B receiver module
-  Display values on Serial Monitor
-  
-  Channel functions by Ricardo Paiva - https://gist.github.com/werneckpaiva/
-  
-  DroneBot Workshop 2021
-  https://dronebotworkshop.com
-*/
-// Motor A
- 
-int enA = 9;
-int in1 = 8;
-int in2 = 7;
- 
-// Motor B
- 
-int enB = 10;
-int in3 = 12;
-int in4 = 13;
- 
-// Define Input Connections
-#define CH2 3
-#define CH1 5
+// Basic demo for accelerometer readings from Adafruit MPU6050
 
-#include <Arduino.h>
-// Integers to represent values from sticks and pots
-int ch1Value;
-int ch2Value;
+// ESP32 Guide: https://RandomNerdTutorials.com/esp32-mpu-6050-accelerometer-gyroscope-arduino/
+// ESP8266 Guide: https://RandomNerdTutorials.com/esp8266-nodemcu-mpu-6050-accelerometer-gyroscope-arduino/
+// Arduino Guide: https://RandomNerdTutorials.com/arduino-mpu-6050-accelerometer-gyroscope/
 
+#include <Adafruit_MPU6050.h>
+#include <Adafruit_Sensor.h>
+#include <Wire.h>
 
-// Read the number of a specified channel and convert to the range provided.
-// If the channel is off, return the default value
-int readChannel(int channelInput, int minLimit, int maxLimit, int channelMin,int channelMax, int defaultValue) {
-  int ch = pulseIn(channelInput, HIGH, 30000);
-  if (ch < 100) return defaultValue;
-  
-  return map(ch, channelMin, channelMax, minLimit, maxLimit);
-}
+Adafruit_MPU6050 mpu;
 
-
-void setup(){
-  // Set up serial monitor
+void setup(void) {
   Serial.begin(115200);
-  
-  // Set all pins as inputs
-  pinMode(CH1, INPUT);
-  pinMode(CH2, INPUT);
-  // Set all the motor control pins to outputs
-  pinMode(enA, OUTPUT);
-  pinMode(enB, OUTPUT);
-  pinMode(in1, OUTPUT);
-  pinMode(in2, OUTPUT);
-  pinMode(in3, OUTPUT);
-  pinMode(in4, OUTPUT);
+  while (!Serial)
+    delay(10); // will pause Zero, Leonardo, etc until serial console opens
 
-}
-void demoOne(int speed)
+  Serial.println("Adafruit MPU6050 test!");
 
-{
-
-  // This function will run the motors in both directions at a fixed speed
-
-  // Turn on motor A
-
-  digitalWrite(in1, HIGH);
-  digitalWrite(in2, LOW);
-
-  // Set speed to 200 out of possible range 0~255
-
-  analogWrite(enA, speed);
-
-  // Turn on motor B
-
-  digitalWrite(in3, HIGH);
-  digitalWrite(in4, LOW);
-
-  // Set speed to 200 out of possible range 0~255
-
-  analogWrite(enB, speed);
-
-}
-void motorControl(int ch1,int ch2)
-{
-  // This function will run the motors in both directions at a fixed speed
-
-  // Turn on motor A and B - Forward
-  if(ch1>0 && ch2 >= 0 && ch2 <= 10)
-  {
-    digitalWrite(in1, HIGH);
-    digitalWrite(in2, LOW);
-    digitalWrite(in3, HIGH);
-    digitalWrite(in4, LOW);	
-
-    // Set speed to 200 out of possible range 0~255
-
-    analogWrite(enA, ch1);
-    analogWrite(enB, ch1);
+  // Try to initialize!
+  if (!mpu.begin()) {
+    Serial.println("Failed to find MPU6050 chip");
+    while (1) {
+      delay(10);
+    }
   }
-  // Turn on motor A and B - Backward
-  else if(ch1<0 && ch2 >= 0 && ch2 <= 10)
-  {
-    digitalWrite(in1, LOW);
-    digitalWrite(in2, HIGH);
-    digitalWrite(in3, LOW);
-    digitalWrite(in4, HIGH);	
+  Serial.println("MPU6050 Found!");
 
-    // Set speed to 200 out of possible range 0~255
-
-    analogWrite(enA, abs(ch1));
-    analogWrite(enB, abs(ch1));
+  mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
+  Serial.print("Accelerometer range set to: ");
+  switch (mpu.getAccelerometerRange()) {
+  case MPU6050_RANGE_2_G:
+    Serial.println("+-2G");
+    break;
+  case MPU6050_RANGE_4_G:
+    Serial.println("+-4G");
+    break;
+  case MPU6050_RANGE_8_G:
+    Serial.println("+-8G");
+    break;
+  case MPU6050_RANGE_16_G:
+    Serial.println("+-16G");
+    break;
   }
-  
-
-  //turn it left
-  else if( ch1 >= 0 && ch2 > 0)
-  {
-    digitalWrite(in1, HIGH);
-    digitalWrite(in2, LOW);
-    digitalWrite(in3, LOW);
-    digitalWrite(in4, HIGH);	
-
-    // Set speed to 200 out of possible range 0~255
-
-    analogWrite(enA, abs(ch2));
-    analogWrite(enB, abs(ch2));
-  }
-  //turn it right
-  else if( ch1 >= 0 && ch2 < 0)
-  {
-    digitalWrite(in1, LOW);
-    digitalWrite(in2, HIGH);
-    digitalWrite(in3, HIGH);
-    digitalWrite(in4, LOW);	
-
-    // Set speed to 200 out of possible range 0~255
-
-    analogWrite(enA, abs(ch2));
-    analogWrite(enB, abs(ch2));
+  mpu.setGyroRange(MPU6050_RANGE_500_DEG);
+  Serial.print("Gyro range set to: ");
+  switch (mpu.getGyroRange()) {
+  case MPU6050_RANGE_250_DEG:
+    Serial.println("+- 250 deg/s");
+    break;
+  case MPU6050_RANGE_500_DEG:
+    Serial.println("+- 500 deg/s");
+    break;
+  case MPU6050_RANGE_1000_DEG:
+    Serial.println("+- 1000 deg/s");
+    break;
+  case MPU6050_RANGE_2000_DEG:
+    Serial.println("+- 2000 deg/s");
+    break;
   }
 
-  // Stop the robot
-  else if ( ch1 >= -2 && ch1 <= 3 && ch2 >= 0 && ch2 <= 10)
-  {
-    digitalWrite(in1, LOW);
-    digitalWrite(in2, LOW);
-    digitalWrite(in3, LOW);
-    digitalWrite(in4, LOW);	
-
-    // Set speed to 200 out of possible range 0~255
-
-    analogWrite(enA, 0);
-    analogWrite(enB, 0);
+  mpu.setFilterBandwidth(MPU6050_BAND_5_HZ);
+  Serial.print("Filter bandwidth set to: ");
+  switch (mpu.getFilterBandwidth()) {
+  case MPU6050_BAND_260_HZ:
+    Serial.println("260 Hz");
+    break;
+  case MPU6050_BAND_184_HZ:
+    Serial.println("184 Hz");
+    break;
+  case MPU6050_BAND_94_HZ:
+    Serial.println("94 Hz");
+    break;
+  case MPU6050_BAND_44_HZ:
+    Serial.println("44 Hz");
+    break;
+  case MPU6050_BAND_21_HZ:
+    Serial.println("21 Hz");
+    break;
+  case MPU6050_BAND_10_HZ:
+    Serial.println("10 Hz");
+    break;
+  case MPU6050_BAND_5_HZ:
+    Serial.println("5 Hz");
+    break;
   }
-  
 
-
+  Serial.println("");
+  delay(100);
 }
 
 void loop() {
-  
-  //demoOne();
-  //delay(1000);
-  // Get values for each channel
-  ch1Value = readChannel(CH1, -250, 250, 1001,1991, 0);
-  ch2Value = readChannel(CH2, -250, 250, 1004,1960, 0);
-  //ch2Value = readChannel(CH2, -250, 250, 0);
-  motorControl(ch1Value,ch2Value);
-  
-  // Print to Serial Monitor
-  Serial.print("Ch1: ");
-  Serial.print(ch1Value);
-  Serial.print(" | Ch2: ");
-  Serial.print(ch2Value);
-  Serial.println();
+  /* Get new sensor events with the readings */
+  sensors_event_t a, g, temp;
+  mpu.getEvent(&a, &g, &temp);
 
+  /* Print out the values */
+  Serial.print("Acceleration X: ");
+  Serial.print(a.acceleration.x);
+  Serial.print(", Y: ");
+  Serial.print(a.acceleration.y);
+  Serial.print(", Z: ");
+  Serial.print(a.acceleration.z);
+  Serial.println(" m/s^2");
 
-  
+  Serial.print("Rotation X: ");
+  Serial.print(g.gyro.x);
+  Serial.print(", Y: ");
+  Serial.print(g.gyro.y);
+  Serial.print(", Z: ");
+  Serial.print(g.gyro.z);
+  Serial.println(" rad/s");
+
+  Serial.print("Temperature: ");
+  Serial.print(temp.temperature);
+  Serial.println(" degC");
+
+  Serial.println("");
   delay(500);
 }
